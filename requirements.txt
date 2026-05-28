@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pypdf
+python-docx
+requests
+beautifulsoup4
+httpx
+Pillow
+qrcode
