@@ -1,7 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/nova/(.*)", "destination": "/api" },
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/api", "destination": "/api" }
-  ]
-}
