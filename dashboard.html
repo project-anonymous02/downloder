@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📂 Downloder File Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: #0f172a; color: #e2e8f0; 
+            padding: 20px; min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        h1 { 
+            text-align: center; margin-bottom: 30px; 
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-size: 2rem;
+        }
+        
+        .section { 
+            background: #1e293b; border-radius: 12px; 
+            padding: 20px; margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        .section-title { 
+            font-size: 1.2rem; margin-bottom: 15px; 
+            display: flex; align-items: center; gap: 10px;
+        }
+        .badge { 
+            background: #3b82f6; color: white; 
+            padding: 2px 10px; border-radius: 20px; font-size: 0.8rem;
+        }
+        
+        .file-list { list-style: none; }
+        .file-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 15px; border-bottom: 1px solid #334155;
+            transition: background 0.2s;
+        }
+        .file-item:last-child { border-bottom: none; }
+        .file-item:hover { background: #334155; border-radius: 8px; }
+        
+        .file-name { font-weight: 500; word-break: break-all; }
+        .file-size { color: #94a3b8; font-size: 0.85rem; white-space: nowrap; margin-left: 15px; }
+        
+        .btn { 
+            background: #3b82f6; color: white; border: none;             padding: 6px 14px; border-radius: 6px; cursor: pointer;
+            font-size: 0.8rem; margin-left: 10px; transition: all 0.2s;
+        }
+        .btn:hover { background: #2563eb; transform: translateY(-1px); }
+        .btn-upload { background: #8b5cf6; }
+        .btn-upload:hover { background: #7c3aed; }
+        
+        .empty { text-align: center; color: #64748b; padding: 30px; font-style: italic; }
+        .loading { text-align: center; padding: 40px; color: #3b82f6; }
+        .error { background: #7f1d1d; border-color: #991b1b; }
+        
+        .refresh-btn { 
+            display: block; margin: 0 auto 20px; 
+            background: #10b981; color: white; border: none;
+            padding: 10px 30px; border-radius: 8px; cursor: pointer;
+            font-size: 1rem; transition: all 0.2s;
+        }
+        .refresh-btn:hover { background: #059669; transform: scale(1.02); }
+        
+        .note { 
+            text-align: center; color: #64748b; font-size: 0.8rem; 
+            margin-top: 20px; line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📂 Downloder File Manager</h1>
+        
+        <button class="refresh-btn" onclick="loadAll()">🔄 Refresh Files</button>
+        
+        <!-- STORAGE DIR (Persistent) -->
+        <div class="section" id="storage-section">
+            <div class="section-title">
+                💾 Persistent Storage <span class="badge">/tmp/nova_storage</span>
+            </div>
+            <div id="storage-list"><div class="loading">⏳ Loading...</div></div>
+        </div>
+        
+        <!-- TMP DIR (Temporary) -->
+        <div class="section" id="tmp-section">
+            <div class="section-title">
+                🗂️ Temporary Files <span class="badge">/tmp</span>
+            </div>
+            <div id="tmp-list"><div class="loading">⏳ Loading...</div></div>
+        </div>
+        
+        <p class="note">
+            ⚠️ <strong>Catatan:</strong> Vercel bersifat stateless. File di <code>/tmp</code> bisa hilang kapan saja saat server restart.<br>
+            Gunakan <strong>Persistent Storage</strong> untuk file yang ingin disimpan lebih lama.<br>            Dashboard ini hanya menampilkan file yang ada di instance server saat ini.
+        </p>
+    </div>
+
+    <script>
+        const API_BASE = 'https://downloder-amber.vercel.app/api';
+        
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+        
+        async function fetchFiles(action, code) {
+            try {
+                const params = new URLSearchParams({ action, code });
+                const res = await fetch(`${API_BASE}?${params}`);
+                const data = await res.json();
+                if (!data.status) throw new Error(data.error || 'Unknown error');
+                return data.files || [];
+            } catch (err) {
+                console.error(`Error fetching ${action}:`, err);
+                return null;
+            }
+        }
+        
+        async function uploadTo0x0(filename, dir) {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Uploading...';
+            btn.disabled = true;
+            
+            try {
+                // Step 1: Read file as base64 from server
+                const readCode = `import os, base64\npath = os.path.join('${dir}', '${filename}')\nwith open(path, 'rb') as f: print(base64.b64encode(f.read()).decode())`;
+                const readRes = await fetch(`${API_BASE}?code=${encodeURIComponent(readCode)}`);
+                const readData = await readRes.json();
+                if (!readData.status) throw new Error('Failed to read file');
+                
+                // Step 2: Upload via server curl
+                const uploadCode = `import subprocess, base64, tempfile, os\ndata = base64.b64decode('${readData.output.trim()}')\ntmp = '/tmp/_upload_${Date.now()}'\nwith open(tmp, 'wb') as f: f.write(data)\nr = subprocess.run(['curl', '-s', '-F', f'file=@{tmp}', 'https://0x0.st'], capture_output=True, text=True)\nos.remove(tmp)\nprint(r.stdout.strip())`;
+                const uploadRes = await fetch(`${API_BASE}?code=${encodeURIComponent(uploadCode)}`);
+                const uploadData = await uploadRes.json();
+                if (!uploadData.status) throw new Error('Upload failed');
+                
+                const link = uploadData.output.trim();
+                window.open(link, '_blank');
+            } catch (err) {                alert('❌ Upload gagal: ' + err.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        function renderFileList(files, containerId, dir) {
+            const container = document.getElementById(containerId);
+            if (!files || files.length === 0) {
+                container.innerHTML = '<div class="empty">📭 Folder kosong</div>';
+                return;
+            }
+            
+            const html = `<ul class="file-list">${files.map(f => `
+                <li class="file-item">
+                    <span class="file-name">📄 ${f.name}</span>
+                    <div style="display:flex;align-items:center;">
+                        <span class="file-size">${formatSize(f.size)}</span>
+                        <button class="btn btn-upload" onclick="uploadTo0x0('${f.name}', '${dir}')">🔗 Get Link</button>
+                    </div>
+                </li>
+            `).join('')}</ul>`;
+            container.innerHTML = html;
+        }
+        
+        async function loadAll() {
+            document.getElementById('storage-list').innerHTML = '<div class="loading">⏳ Loading...</div>';
+            document.getElementById('tmp-list').innerHTML = '<div class="loading">⏳ Loading...</div>';
+            
+            // Load persistent storage
+            const storageFiles = await fetchFiles('storage', 'list');
+            renderFileList(storageFiles, 'storage-list', '/tmp/nova_storage');
+            
+            // Load /tmp via shell ls
+            try {
+                const tmpCode = '!ls -la /tmp | tail -n +2';
+                const tmpRes = await fetch(`${API_BASE}?code=${encodeURIComponent(tmpCode)}`);
+                const tmpData = await tmpRes.json();
+                
+                if (tmpData.status && tmpData.output) {
+                    const lines = tmpData.output.trim().split('\n').filter(l => l.trim());
+                    const files = lines.map(line => {
+                        const parts = line.split(/\s+/);
+                        const size = parseInt(parts[4]) || 0;
+                        const name = parts.slice(8).join(' ');
+                        return { name, size };
+                    }).filter(f => f.name && !f.name.startsWith('.') && f.name !== 'nova_storage');
+                    renderFileList(files, 'tmp-list', '/tmp');
+                } else {                    document.getElementById('tmp-list').innerHTML = '<div class="empty">📭 Tidak bisa membaca /tmp</div>';
+                }
+            } catch (err) {
+                document.getElementById('tmp-list').innerHTML = '<div class="empty">❌ Error membaca /tmp</div>';
+            }
+        }
+        
+        // Auto-load on page open
+        loadAll();
+    </script>
+</body>
+</html>
