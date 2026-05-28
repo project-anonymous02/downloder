@@ -1,4 +1,0 @@
-fastapi
-requests
-beautifulsoup4
-httpx
