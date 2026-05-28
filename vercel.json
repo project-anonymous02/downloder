@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "pages/api/fetch.js": {
+      "maxDuration": 10
+    },
+    "py/run.py": {
+      "maxDuration": 10
+    }
+  }
+}
