@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/python" },
+    { "source": "/nova/(.*)", "destination": "/python" },
+    { "source": "/api", "destination": "/python" }
+  ]
+}
