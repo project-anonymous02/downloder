@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api2/run.py": {
+      "maxDuration": 10
+    }
+  }
+}
