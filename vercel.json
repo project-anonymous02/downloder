@@ -1,0 +1,10 @@
+{
+  "builds": [
+    { "src": "pages/api/fetch.js", "use": "@vercel/next" },
+    { "src": "pages/api/run.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/api/fetch", "dest": "/pages/api/fetch.js" },
+    { "src": "/api/run", "dest": "/pages/api/run.py" }
+  ]
+}
