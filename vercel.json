@@ -1,0 +1,19 @@
+{
+  "routes": [
+    {
+      "src": "/screenshot",
+      "dest": "/screenshot/index.html"
+    },
+    {
+      "src": "/screenshot/(.*)",
+      "dest": "/screenshot/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.py"
+    }
+  ]
+}
