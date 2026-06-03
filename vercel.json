@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/screenshot",
+      "destination": "/screenshot/index.html"
+    },
+    {
+      "source": "/screenshot/(.*)",
+      "destination": "/screenshot/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.py"
+    }
+  ]
+}
